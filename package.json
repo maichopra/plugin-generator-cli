@@ -1,8 +1,9 @@
 {
-  "name": "plugin-generator",
+  "name": "d365-plugin-generator",
   "version": "1.0.0",
   "description": "Generates Dynamics 365 CE Plugin Template",
   "main": "index.js",
+  "bin": "./index.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,5 +13,13 @@
   "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^0.7.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maichopra/plugin-generator-cli"
+  },
+  "bugs": {
+    "url": "https://github.com/maichopra/plugin-generator-cli/issues"
+  },
+  "homepage": "https://github.com/maichopra/plugin-generator-cli/blob/main/README.md"
 }
