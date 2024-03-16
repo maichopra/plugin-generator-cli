@@ -1,355 +1,127 @@
 #! /usr/bin/env node
 
-import fs, { stat, write } from "fs";
-import { promisify } from "util";
-
+// Import Packages
+import fs from "fs";
 import * as p from "@clack/prompts";
 import { setTimeout } from "node:timers/promises";
 import color from "picocolors";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
-async function generateFiles(
-  path,
-  namespace,
-  classname,
-  entity,
-  configuration,
-  helper
-) {
-  await writeFile(path, namespace, classname, entity, configuration);
+// Import Utility Files
+import createDirectoryContents from "./utilities/createDirectoryContents.js";
+import generateFiles from "./utilities/generateTemplateContent.js";
+import hydrateTemplate from "./utilities/templateUtilities.js";
 
-  if (helper) {
-    await writeHelper(namespace);
-  }
-}
-
-async function writeHelper(namespace) {
-  let content = `
-  using Microsoft.Xrm.Sdk.Messages;
-  using Microsoft.Xrm.Sdk.Metadata;
-  using Microsoft.Xrm.Sdk;
-  using System;
-  using System.Collections.Generic;
-  using System.Linq;
-  using System.Text;
-  using System.Threading.Tasks;
-  using Microsoft.Xrm.Sdk.Query;
-
-  namespace ${namespace}
-  {
-      public static class Helper
-      {
-          public const string
-              PreOperation = "20",
-              PostOperation = "40",
-              PreValidation = "10";
-
-          public const string
-              CreateMessage = "create",
-              UpdateMessage = "update",
-              DeleteMessage = "delete";
-      }
-  }
-  `;
-  try {
-    await promisify(fs.writeFile)(`helper.cs`, content);
-  } catch (e) {
-    Logger.debug(e);
-    throw new Error(`Couldn't create file: '${pathArg}'`);
-  }
-}
-
-async function writeFile(path, namespace, classname, entity, configuration) {
-  let createMessage =
-    configuration.filter((config) => {
-      return config.includes("create");
-    }).length > 0;
-  let updateMessage =
-    configuration.filter((config) => {
-      return config.includes("update");
-    }).length > 0;
-  let deleteMessage =
-    configuration.filter((config) => {
-      return config.includes("delete");
-    }).length > 0;
-
-  let preValidationStage =
-    configuration.filter((config) => {
-      return config.includes("pre-validation");
-    }).length > 0;
-  let PreOperationStage =
-    configuration.filter((config) => {
-      return config.includes("pre-operation");
-    }).length > 0;
-  let PostOperationStage =
-    configuration.filter((config) => {
-      return config.includes("post-operation");
-    }).length > 0;
-
-  let content = `
-  using Microsoft.Xrm.Sdk;
-  using System;
-
-  namespace ${namespace}
-  {
-      public class ${classname} : IPlugin
-      {
-          public void Execute(IServiceProvider serviceProvider)
-          {
-              //This is the execute method
-              ITracingService tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
-              IPluginExecutionContext context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-              if (!context.InputParameters.Contains("Target") || context.PrimaryEntityName != "${entity}")
-              { 
-                  throw new InvalidPluginExecutionException("The plugin is not running in the context of the entity or has no target");
-              }            
-              IOrganizationServiceFactory organizationServiceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
-              IOrganizationService service = organizationServiceFactory.CreateOrganizationService(context.UserId);
-
-              try
-              {
-                  Entity entity = new Entity();
-                  if (context.InputParameters["Target"] is Entity)
-                  {
-                      entity = (Entity)context.InputParameters["Target"];
-                  }
-
-                  switch (context.MessageName.ToLower())
-                  {
-                      ${
-                        createMessage
-                          ? `
-                      case Helper.CreateMessage:
-                        switch (context.Stage.ToString())
-                        {
-                          ${
-                            configuration.includes("create-pre-validation")
-                              ? `case Helper.PreValidation:
-                                  PerformPreValidationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          }  
-
-                          ${
-                            configuration.includes("create-pre-operation")
-                              ? `case Helper.PreOperation:
-                                  PerformPreOperationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          } 
-
-                          ${
-                            configuration.includes("create-post-operation")
-                              ? `case Helper.PostOperation:
-                                  PerformPostOperationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          } 
-                        }
-                        break;`
-                          : ``
-                      }
-
-                      ${
-                        updateMessage
-                          ? `
-                      case Helper.UpdateMessage:
-                        switch (context.Stage.ToString())
-                        {
-                          ${
-                            configuration.includes("update-pre-validation")
-                              ? `case Helper.PreValidation:
-                                  PerformPreValidationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          }  
-
-                          ${
-                            configuration.includes("update-pre-operation")
-                              ? `case Helper.PreOperation:
-                                  PerformPreOperationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          } 
-
-                          ${
-                            configuration.includes("update-post-operation")
-                              ? `case Helper.PostOperation:
-                                  PerformPostOperationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          } 
-                        }
-                        break;`
-                          : ``
-                      }
-
-                      ${
-                        deleteMessage
-                          ? `
-                      case Helper.DeleteMessage:
-                        switch (context.Stage.ToString())
-                        {
-                          ${
-                            configuration.includes("delete-pre-validation")
-                              ? `case Helper.PreValidation:
-                                  PerformPreValidationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          }  
-
-                          ${
-                            configuration.includes("delete-pre-operation")
-                              ? `case Helper.PreOperation:
-                                  PerformPreOperationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          } 
-
-                          ${
-                            configuration.includes("delete-post-operation")
-                              ? `case Helper.PostOperation:
-                                  PerformPostOperationActivities(entity, context, service, tracingService);
-                                  break;`
-                              : ``
-                          } 
-                        }
-                        break;`
-                          : ``
-                      }
-                  }
-              }
-              catch (Exception ex)
-              {
-                  tracingService.Trace("${classname}: {0}", ex.ToString());
-                  throw;
-              }
-          }
-
-          ${
-            preValidationStage
-              ? `public void PerformPreValidationActivities(Entity entity, IPluginExecutionContext context, IOrganizationService service, ITracingService tracingService)
-          {
-              // Write Pre-Validation Functions Here
-          }`
-              : ``
-          }
-          
-          ${
-            PreOperationStage
-              ? `public void PerformPreOperationActivities(Entity entity, IPluginExecutionContext context, IOrganizationService service, ITracingService tracingService)
-              {
-                // Write Pre-Operation Functions Here
-              }`
-              : ``
-          }
-
-          ${
-            PostOperationStage
-              ? `public void PerformPostOperationActivities(Entity entity, IPluginExecutionContext context, IOrganizationService service, ITracingService tracingService)
-              {
-                // Write Post-Operation Functions Here
-              } `
-              : ``
-          }
-      }
-  }  
-`;
-
-  try {
-    await promisify(fs.writeFile)(`${path}.cs`, content);
-  } catch (e) {
-    Logger.debug(e);
-    throw new Error(`Couldn't create file: '${pathArg}'`);
-  }
-}
-
-
-
+// Define Variables
+const CURR_DIR = process.cwd();
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
   console.clear();
 
   await setTimeout(1000);
 
-  p.intro(`${color.bgCyan(color.black(" create-app "))}`);
+  p.intro(`${color.bgCyan(color.black(" d365-plugin-generator "))}`);
 
-  const project = await p.group(
-    {
-      path: () =>
-        p.text({
-          message: "Where should we generate your plugin?",
-          placeholder: "./sparkling-solid",
-          validate: (value) => {
-            if (!value) return "Please enter a path.";
-            if (value[0] !== ".") return "Please enter a relative path.";
-          },
-        }),
-      namespace: () =>
-        p.text({
-          message: "What is the Namespace of the Plugin?",
-          placeholder: "DTT.Plugins.Entity",
-          validate: (value) => {
-            if (!value) return "Please provide a Namespace.";
-          },
-        }),
-      classname: () =>
-        p.text({
-          message: "What is the Class Name of the Plugin?",
-          placeholder: "EntityNamePlugin",
-          validate: (value) => {
-            if (!value) return "Please provide a Class Name.";
-          },
-        }),
-      entity: () =>
-        p.text({
-          message: "What entity do you want to generate a plugin for?",
-          placeholder: "dtt_application",
-          validate: (value) => {
-            if (!value.startsWith("dtt_"))
-              return "Please enter the logical name of an entity (beggining with dtt_)";
-          },
-        }),
-      configuration: () =>
-        p.groupMultiselect({
-          message: "Which configuration do you wish to include?",
-          options: {
-            create: [
-              { value: "create-pre-validation", label: "pre-validation" },
-              { value: "create-pre-operation", label: "pre-operation" },
-              { value: "create-post-operation", label: "post-operation" },
-            ],
-            update: [
-              { value: "update-pre-validation", label: "pre-validation" },
-              { value: "update-pre-operation", label: "pre-operation" },
-              { value: "update-post-operation", label: "post-operation" },
-            ],
-            delete: [
-              { value: "delete-pre-validation", label: "pre-validation" },
-              { value: "delete-pre-operation", label: "pre-operation" },
-              { value: "delete-post-operation", label: "post-operation" },
-            ],
-          },
-        }),
-      helper: () =>
-        p.confirm({
-          message: "Do you want to initialise a helper file?",
-          initialValue: false,
-        }),
-      install: () =>
-        p.confirm({
-          message: "Install dependencies?",
-          initialValue: false,
-        }),
-    },
-    {
-      onCancel: () => {
-        p.cancel("Operation cancelled.");
-        process.exit(0);
-      },
-    }
-  );
+  const CHOICES = fs.readdirSync(`${__dirname}/templates`);
+  let choiceOptions = CHOICES.map((choice) => ({
+    value: choice,
+    label: choice,
+  }));
 
-  if (project.install) {
+  const switchProj = await p.group({
+    questionSelect: () =>
+      p.select({
+        message: "Which question set do you want to use?",
+        options: [
+          { value: "question1.js", label: "Q1" },
+          { value: "question2.js", label: "Q2" },
+        ],
+      }),
+  });
+
+  if (switchProj.questionSelect != null) {
+    const project = await import(`./${switchProj.questionSelect}`);
+  }
+
+  // const project = await p.group(
+  //   {
+  //     path: () =>
+  //       p.text({
+  //         message: "Where should we generate the template file?",
+  //         placeholder: "./sparkling-solid",
+  //         validate: (value) => {
+  //           if (!value) return "Please enter a path.";
+  //           if (value[0] !== ".") return "Please enter a relative path.";
+  //         },
+  //       }),
+  //     template: () =>
+  //       p.select({
+  //         message: "Select the project template you want to clone.",
+  //         options: choiceOptions,
+  //       }),
+  //     namespace: () =>
+  //       p.text({
+  //         message: "What is the Namespace of the Plugin?",
+  //         placeholder: "DTT.Plugins.Entity",
+  //         validate: (value) => {
+  //           if (!value) return "Please provide a Namespace.";
+  //         },
+  //       }),
+  //     classname: () =>
+  //       p.text({
+  //         message: "What is the Class Name of the Plugin?",
+  //         placeholder: "EntityNamePlugin",
+  //         validate: (value) => {
+  //           if (!value) return "Please provide a Class Name.";
+  //         },
+  //       }),
+  //     entity: () =>
+  //       p.text({
+  //         message: "What entity do you want to generate a plugin for?",
+  //         placeholder: "dtt_application",
+  //         validate: (value) => {
+  //           if (!value.startsWith("dtt_"))
+  //             return "Please enter the logical name of an entity (beggining with dtt_)";
+  //         },
+  //       }),
+  //     configuration: () =>
+  //       p.groupMultiselect({
+  //         message: "Which configuration do you wish to include?",
+  //         options: {
+  //           create: [
+  //             { value: "create-pre-validation", label: "pre-validation" },
+  //             { value: "create-pre-operation", label: "pre-operation" },
+  //             { value: "create-post-operation", label: "post-operation" },
+  //           ],
+  //           update: [
+  //             { value: "update-pre-validation", label: "pre-validation" },
+  //             { value: "update-pre-operation", label: "pre-operation" },
+  //             { value: "update-post-operation", label: "post-operation" },
+  //           ],
+  //           delete: [
+  //             { value: "delete-pre-validation", label: "pre-validation" },
+  //             { value: "delete-pre-operation", label: "pre-operation" },
+  //             { value: "delete-post-operation", label: "post-operation" },
+  //           ],
+  //         },
+  //       }),
+  //     generate: () =>
+  //       p.confirm({
+  //         message: "Confrim template generation",
+  //         initialValue: false,
+  //       }),
+  //   },
+  //   {
+  //     onCancel: () => {
+  //       p.cancel("Operation cancelled.");
+  //       process.exit(0);
+  //     },
+  //   }
+  // );
+
+  if (project.generate) {
     const s = p.spinner();
 
     p.note(
@@ -358,7 +130,6 @@ async function main() {
       With a namespace of ${project.namespace}.
       With a class name of ${project.classname}.
       For entity ${project.entity}.
-      ${project.helper ? `Initialising helper file` : ``}
     `,
       `
     Configuration`
@@ -366,22 +137,39 @@ async function main() {
 
     s.start("Generating Files");
 
-    generateFiles(
-      project.path,
-      project.namespace,
-      project.classname,
-      project.entity,
-      project.configuration,
-      project.helper
+    // generateFiles(
+    //   project.path,
+    //   project.namespace,
+    //   project.classname,
+    //   project.entity,
+    //   project.configuration
+    // );
+
+    fs.mkdirSync(`${CURR_DIR}/${project.path}`);
+
+    await createDirectoryContents(
+      `${__dirname}/templates/${project.template}`,
+      `${project.path}`
     );
+
+    // hydrateTemplate("testFile.js", [
+    //   { from: /NAME/g, to: project.namespace },
+    //   { from: /DATE/g, to: project.classname },
+    //   { from: /COMPANY/g, to: project.entity },
+    // ]);
+
+    // console.log(await import("./test/_config.js"));
+    // hydrateTemplate("testFile.js", await import("./test/_config.js").default);
 
     await setTimeout(2500);
     s.stop("Files Generated");
   }
 
-  let nextSteps = `cd ${project.path}        \n${
-    project.install ? "" : "pnpm install\n"
-  }pnpm dev`;
+  let nextSteps = `
+  cd ${project.path}
+  Update plugin file.
+  Build.
+  Register.`;
 
   p.note(nextSteps, "Next steps.");
 
