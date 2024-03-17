@@ -1,6 +1,6 @@
 {
   "name": "d365-plugin-generator",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Generates Dynamics 365 CE Plugin Template",
   "main": "index.js",
   "bin": "./index.js",
@@ -17,7 +17,8 @@
   "author": "Maiher Chopra",
   "license": "MIT",
   "dependencies": {
-    "@clack/prompts": "^0.7.0"
+    "@clack/prompts": "^0.7.0",
+    "replace-in-file": "^7.1.0"
   },
   "repository": {
     "type": "git",

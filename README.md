@@ -7,6 +7,7 @@ This tool is a work in progress.
 # Index
 - [Installation](#installation)
 - [Options](#options)
+- [Templates](#templates)
 
 
 ## Installation
@@ -25,8 +26,7 @@ yarn add d365-plugin-generator
 - `File Path`: Determines the File Path for the Selected Template Folder
 
 - `Project Templates`:
-  Simple Plugin: Early Bound Plugin. All Stages and Messages selected will be generated in a single file. Requires the Helper File.
-  Complex Plugin: Early Bound Plugin. Individual File Generated for each combination of Stage and Message selected. 
+  -  __Simple Plugin__: Early Bound Plugin. All Stages and Messages selected will be generated in a single file. Requires the Helper File (included).
 
 - `Namespace`: The Namespace of the Plugin
 
@@ -48,6 +48,10 @@ yarn add d365-plugin-generator
       - Pre-Operation
       - Post-Operation
 
-- `Helper File`: Generates a Helper File with the same Namespace as specified above.
+## Templates
 
-
+### Simple Plugin
+Generates the following files
+- `helper.cs`: A helper file that contains Message and Stage constants.
+- `simplePlugin.cs`: A Plugin Class File based on the configuration setting specified in the CLI.
+- `simplePluginFull.cs`: A Plugin Class File with all Messages and Stages populated.

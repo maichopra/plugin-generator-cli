@@ -25,51 +25,11 @@ namespace NAMESPACE
                 }
                 switch (context.MessageName.ToLower())
                 {
+                    CREATE_MESSAGE
 
-                    case Helper.CreateMessage:
-                        switch (context.Stage.ToString())
-                        {
-                            case Helper.PreValidation:
-                                PerformPreValidationActivities(entity, context, service, tracingService);
-                                break;
-                            case Helper.PreOperation:
-                                PerformPreOperationActivities(entity, context, service, tracingService);
-                                break;
-                            case Helper.PostOperation:
-                                PerformPostOperationActivities(entity, context, service, tracingService);
-                                break;
-                        }
-                        break;
+                    UPDATE_MESSAGE
 
-                    case Helper.UpdateMessage:
-                        switch (context.Stage.ToString())
-                        {
-                            case Helper.PreValidation:
-                                PerformPreValidationActivities(entity, context, service, tracingService);
-                                break;
-                            case Helper.PreOperation:
-                                PerformPreOperationActivities(entity, context, service, tracingService);
-                                break;
-                            case Helper.PostOperation:
-                                PerformPostOperationActivities(entity, context, service, tracingService);
-                                break;
-                        }
-                        break;
-
-                    case Helper.DeleteMessage:
-                        switch (context.Stage.ToString())
-                        {
-                            case Helper.PreValidation:
-                                PerformPreValidationActivities(entity, context, service, tracingService);
-                                break;
-                            case Helper.PreOperation:
-                                PerformPreOperationActivities(entity, context, service, tracingService);
-                                break;
-                            case Helper.PostOperation:
-                                PerformPostOperationActivities(entity, context, service, tracingService);
-                                break;
-                        }
-                        break;
+                    DELETE_MESSAGE
                 }
             }
             catch (Exception ex)
@@ -78,17 +38,8 @@ namespace NAMESPACE
                 throw;
             }
         }
-        public void PerformPreValidationActivities(Entity entity, IPluginExecutionContext context, IOrganizationService service, ITracingService tracingService)
-        {
-            // Write Pre-Validation Functions Here
-        }
-        public void PerformPreOperationActivities(Entity entity, IPluginExecutionContext context, IOrganizationService service, ITracingService tracingService)
-        {
-            // Write Pre-Operation Functions Here
-        }
-        public void PerformPostOperationActivities(Entity entity, IPluginExecutionContext context, IOrganizationService service, ITracingService tracingService)
-        {
-            // Write Post-Operation Functions Here
-        }
+        PREVALIDATION_ACTIVITY
+        PREOPERATION_ACTIVITY
+        POSTOPERATION_ACTIVITY
     }
 }
